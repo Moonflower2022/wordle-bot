@@ -7,7 +7,8 @@ wordle_better.py is a better version that tells you the best word to guess in te
 
 # usage
 1. download the code
-2. run the file
-3. follow the instructions
+2. cd to the directory
+3. run the file
+4. follow the instructions
 
 Feel free to send any unexpected bugs or comments to dumbderivatives@gmail.com
