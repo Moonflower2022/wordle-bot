@@ -65,13 +65,6 @@ nth = {
     5: "fifth"
 }
 
-conversion = {
-    "n": 1,
-    "y": 2,
-    "g": 3
-}
-
-
 def get_best_guess(guesses, wl):
     remaining_wl = np.copy(wl)
     for i in range(len(guesses)):
@@ -107,7 +100,7 @@ if __name__ == '__main__':
                                           lambda output: output.strip().lower(), lambda output: output == 'y' or output == 'n')]
 
     print("Use \"lares\" as your first word.")
-    suggested_guess = "lares"
+    best_guess = "lares"
     guesses = []
 
     for i in range(5):
@@ -117,8 +110,7 @@ if __name__ == '__main__':
         info = prompt("How correct was it? (for each letter, type 1 for gray, 2 for yellow, and 3 for green) ",
                       lambda output: output.strip().lower(), lambda info: len(info) == 5 and info.isnumeric())
 
-        guesses.append(
-            (np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
+        guesses.append((np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
         # use possible_answers if we know the answer list, otherwise use wl
         guess, remaining, ended = get_best_guess(
             guesses, np.asarray(possible_answers))
