@@ -86,7 +86,8 @@ def word_exists(new_guess, new_info, guesses, wl):
 
     remaining_wl = np.copy(wl)
     for i in range(len(new_guesses)):
-        remaining_wl = get_remaining(new_guesses[i][0], new_guesses[i][1], wl=remaining_wl)
+        remaining_wl = get_remaining(
+            new_guesses[i][0], new_guesses[i][1], wl=remaining_wl)
 
     return np.count_nonzero(remaining_wl) != 0
 
@@ -101,7 +102,7 @@ def prompt(prompt_text, output_conversion, output_criteria):
                     print(message)
                     broken_criteria = True
                     break
-                    
+
             if broken_criteria:
                 continue
         except Exception as e:
@@ -125,7 +126,8 @@ if __name__ == '__main__':
         guess_input_criteria = [
             (lambda word: len(word) == 5, "Input word is not 5 characters long."),
             (lambda word: word.isalpha(), "Input word is not all letters."),
-            (lambda word: any(word == "".join(list_word) for list_word in wl), "Input word is not in the available guesses list.")
+            (lambda word: any(word == "".join(list_word) for list_word in wl),
+             "Input word is not in the available guesses list.")
         ]
         if not obey:
             guess_letters = prompt(f"What was your {nth[i + 1]} guess? ", lambda output: output.strip(
