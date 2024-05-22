@@ -81,24 +81,33 @@ def get_best_guess(guesses, wl):
     return wl[np.argmin(rem)], remaining_wl, False
 
 
+def word_exists(new_guess, new_info, guesses, wl):
+    new_guesses = guesses + [(new_guess, new_info)]
+
+    remaining_wl = np.copy(wl)
+    for i in range(len(new_guesses)):
+        remaining_wl = get_remaining(new_guesses[i][0], new_guesses[i][1], wl=remaining_wl)
+
+    return np.count_nonzero(remaining_wl) != 0
+
+
 def prompt(prompt_text, output_conversion, output_criteria):
     while True:
         output = output_conversion(input(prompt_text))
         try:
+            broken_criteria = False
             for criteria, message in output_criteria:
                 if not criteria(output):
                     print(message)
-                    continue
+                    broken_criteria = True
+                    
+            if broken_criteria:
+                continue
         except Exception as e:
             print(f"An error occured: {e}. Try again.")
         else:
             return output
 
-
-def word_exists(new_guess, new_info, guesses, wl):
-    mask = gen_mask([pair[0] for pair in guesses] + [new_guess],
-                    [pair[1] for pair in guesses] + [new_info], wl)
-    return np.count_nonzero(mask) != 0
 
 # numbers 1, 2, 3 for gray, orange, green.
 
@@ -122,9 +131,9 @@ if __name__ == '__main__':
             ).lower(), guess_input_criteria)
         info_input_criteria = [
             (lambda info: len(info) == 5, "Input info is not 5 characters long."),
-            (lambda info: all([char in [1, 2, 3] for char in info]),
+            (lambda info: all([char in ["1", "2", "3"] for char in info]),
              "Input word has characters that are not in {1, 2, 3}."),
-            (lambda info: word_exists(guess_letters if obey else best_guess, info,
+            (lambda info: word_exists(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
              guesses, wl), "The input info does not leave any words remaining.")
         ]
         info = prompt("How correct was it? (for each letter, type 1 for gray, 2 for yellow, and 3 for green) ",
