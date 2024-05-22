@@ -100,6 +100,7 @@ def prompt(prompt_text, output_conversion, output_criteria):
                 if not criteria(output):
                     print(message)
                     broken_criteria = True
+                    break
                     
             if broken_criteria:
                 continue
@@ -114,7 +115,7 @@ def prompt(prompt_text, output_conversion, output_criteria):
 
 if __name__ == '__main__':
     obey = {'y': True, 'n': False}[prompt("Will you listen to the commands? (y/n) ",
-                                          lambda output: output.strip().lower(), [(lambda output: output == 'y' or output == 'n', "Input is not 'y' or 'n'")])]
+                                          lambda output: output.strip().lower(), [(lambda output: output == 'y' or output == 'n', "Input is not 'y' or 'n'.")])]
 
     print("Use \"lares\" as your first word.")
     best_guess = "lares"
@@ -124,7 +125,7 @@ if __name__ == '__main__':
         guess_input_criteria = [
             (lambda word: len(word) == 5, "Input word is not 5 characters long."),
             (lambda word: word.isalpha(), "Input word is not all letters."),
-            (lambda word: word in wl, "Input word is not in the available guesses list.")
+            (lambda word: any(word == "".join(list_word) for list_word in wl), "Input word is not in the available guesses list.")
         ]
         if not obey:
             guess_letters = prompt(f"What was your {nth[i + 1]} guess? ", lambda output: output.strip(
@@ -152,4 +153,4 @@ if __name__ == '__main__':
         print("Remaining possible answers:")
         print(np.array(["".join(sub_array) for sub_array in remaining]))
         print("The best guess right now is \"" + best_guess + "\".")
-    print("Thanks for using SuperGoodWordleBot™")
+    print("Thank you for using SuperGoodWordleBot™")
