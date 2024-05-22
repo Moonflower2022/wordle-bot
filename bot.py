@@ -84,16 +84,20 @@ def prompt(prompt_text, output_conversion, output_criteria):
     while True:
         output = output_conversion(input(prompt_text))
         try:
-            if not output_criteria(output):
-                print("Invalid input. Try again.")
-                continue
+            for criteria in output_criteria:
+                if not criteria[0](output):
+                    print(criteria[1])
+                    continue
         except Exception as e:
             print(f"An error occured: {e}. Try again.")
         else:
             return output
+        
+def word_exists(new_guess, new_info, guesses, wl):
+    mask = gen_mask([pair[0] for pair in guesses] + [new_guess], [pair[1] for pair in guesses] + [new_info], wl)
+    return np.count_nonzero(mask) != 0
 
 # numbers 1, 2, 3 for gray, orange, green.
-
 
 if __name__ == '__main__':
     obey = {'y': True, 'n': False}[prompt("Will you listen to the commands? (y/n) ",
@@ -104,11 +108,21 @@ if __name__ == '__main__':
     guesses = []
 
     for i in range(5):
+        guess_input_criteria = [
+            (lambda word: len(word) == 5, "Input word is not 5 characters long."), 
+            (lambda word: word.isalpha(), "Input word is not all letters."),
+            (lambda word: word in wl, "Input word is not in the available guesses list.")
+        ]
         if not obey:
             guess_letters = prompt(f"What was your {nth[i + 1]} guess? ", lambda output: output.strip(
-            ).lower(), lambda word: len(word) == 5 and word.isalpha() and word in wl)
+            ).lower(), guess_input_criteria)
+        info_input_criteria = [
+            (lambda info: len(info) == 5, "Input info is not 5 characters long."), 
+            (lambda info: all([char in [1, 2, 3] for char in info]), "Input word has characters that are not in {1, 2, 3}."),
+            (lambda info: word_exists(guess_letters if obey else best_guess, info, guesses, wl), "The input info does not leave any words remaining.")
+        ]
         info = prompt("How correct was it? (for each letter, type 1 for gray, 2 for yellow, and 3 for green) ",
-                      lambda output: output.strip().lower(), lambda info: len(info) == 5 and info.isnumeric())
+                      lambda output: output.strip().lower(), info_input_criteria)
 
         guesses.append((np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
         # use possible_answers if we know the answer list, otherwise use wl
