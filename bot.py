@@ -59,7 +59,7 @@ def avg_frac_remaining(guess, remaining_wl):
 
 
 def score_word(guess, remaining_wl=wl):
-    return avg_frac_remaining(guess, remaining_wl) + (0.0001 if guess in possible_answers else 0)
+    return avg_frac_remaining(guess, remaining_wl) + (0.0001 if any(list(guess) == word for word in possible_answers) else 0)
 
 
 def get_best_guess(guesses, wl):
@@ -70,7 +70,7 @@ def get_best_guess(guesses, wl):
     if len(remaining_wl) == 1:
         return remaining_wl[0], [remaining_wl[0]], True
     with mp.Pool(mp.cpu_count()) as p:
-        func = ft.partial(avg_frac_remaining, remaining_wl=remaining_wl)
+        func = ft.partial(score_word, remaining_wl=remaining_wl)
         rem = p.map(func, wl)
     # ties = rem == rem[np.argmin(rem)]
     return wl[np.argmin(rem)], remaining_wl, False
