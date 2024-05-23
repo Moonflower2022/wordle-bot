@@ -19,6 +19,9 @@ possible_guesses = [list(word) for word in guesses_text.split("\n")]
 
 wl = np.asarray(possible_answers + possible_guesses)
 
+answers_file.close()
+guesess_file.close()
+
 
 def gen_mask(guess, info, wl):
     info = np.asarray(info)
@@ -52,10 +55,9 @@ def frac_remaining(guess, info, wl):
 
 
 def avg_frac_remaining(guess, remaining_wl):
-    info = it.product(*[[1, 2, 3] for _ in range(5)])
-    info = [x for x in info if np.count_nonzero(
-        gen_mask(guess, x, remaining_wl)) != 0]
-    rem = [frac_remaining(guess, i, remaining_wl) for i in info]
+    all_info = it.product(*[[1, 2, 3] for _ in range(5)])
+    infos = [info for info in all_info if np.count_nonzero(gen_mask(guess, info, remaining_wl)) != 0]
+    rem = [frac_remaining(guess, info, remaining_wl) for info in infos]
 
     return np.sum(np.square(rem))/np.sum(rem)
 
