@@ -39,8 +39,11 @@ def gen_mask(guess, info, wl):
     return mask
 
 
-def get_remaining(guess, info, wl):
-    return wl[gen_mask(guess, info, wl)]
+def get_remaining(guesses, wl):
+    remaining_wl = np.copy(wl)
+    for guess, info in guesses:
+        remaining_wl = wl[gen_mask(guess, info, remaining_wl)]
+    return remaining_wl
 
 
 def frac_remaining(guess, info, wl):
@@ -53,8 +56,7 @@ def avg_frac_remaining(guess, remaining_wl):
     info = [x for x in info if np.count_nonzero(
         gen_mask(guess, x, remaining_wl)) != 0]
     rem = [frac_remaining(guess, i, remaining_wl) for i in info]
-    if np.sum(rem) == 0:
-        return 0
+
     return np.sum(np.square(rem))/np.sum(rem)
 
 
@@ -63,10 +65,7 @@ def score_word(guess, remaining_wl=wl):
 
 
 def get_best_guess(guesses, wl):
-    remaining_wl = np.copy(wl)
-    for guess, info in guesses:
-        remaining_wl = get_remaining(
-            guess, info, remaining_wl)
+    remaining_wl = get_remaining(guesses, wl)
     if len(remaining_wl) == 1:
         return remaining_wl[0], [remaining_wl[0]], True
     with mp.Pool(mp.cpu_count()) as p:
@@ -79,10 +78,7 @@ def get_best_guess(guesses, wl):
 def guess_valid(new_guess, new_info, guesses, wl):
     new_guesses = guesses + [(new_guess, new_info)]
 
-    remaining_wl = np.copy(wl)
-    for guess, info in new_guesses:
-        remaining_wl = get_remaining(
-            guess, info, remaining_wl)
+    remaining_wl = get_remaining(new_guesses, wl)
 
     return len(remaining_wl) != 0
 
@@ -139,10 +135,10 @@ if __name__ == '__main__':
             (lambda info: all([char in ["1", "2", "3"] for char in info]),
              "Input word has characters that are not in {1, 2, 3}."),
             (lambda info: guess_valid(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
-             guesses, possible_answers), "The input info does not leave any possible answers remaining.")
+             guesses, np.asarray(possible_answers)), "The input info does not leave any possible answers remaining.")
         ]
         info = prompt("How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
-                      lambda output: output.strip().lower(), info_input_criteria)
+                    lambda output: output.strip().lower(), info_input_criteria)
 
         guesses.append(
             (np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
