@@ -1,7 +1,7 @@
-from bot import get_best_guess, gen_mask, wl
+from bot import get_best_guess, gen_mask, wl, possible_answers
 import itertools as it
 import numpy as np
-import json
+import json    
 
 if __name__ == '__main__':
     word = np.asarray(["l", "a", "r", "e", "s"])
@@ -12,8 +12,11 @@ if __name__ == '__main__':
     first_layer = {}
 
     for i, info in enumerate(infos):
+        if i == 1:
+            break
         print(f"{i}/{len(infos)}", end="\r")
-        first_layer[info] = get_best_guess([(word, info)], wl)
+        first_layer[str(info)] = "".join(list(get_best_guess([(word, info)], np.asarray(possible_answers))[0]))
+        
                     
-    with open("first_layer.txt") as file:
+    with open("first_layer.json", "w+") as file:
         json.dump(first_layer, file, indent=4)
