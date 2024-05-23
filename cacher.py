@@ -7,14 +7,13 @@ if __name__ == '__main__':
     word = np.asarray(["l", "a", "r", "e", "s"])
 
     all_info = it.product(*[[1, 2, 3] for _ in range(5)])
-    infos = [info for info in all_info if np.count_nonzero(gen_mask(word, info, wl)) != 0]
+    infos = [info for info in all_info if np.count_nonzero(gen_mask(word, info, np.asarray(possible_answers))) != 0]
 
     first_layer = {}
 
     for i, info in enumerate(infos):
-        if i == 1:
-            break
-        print(f"{i}/{len(infos)}", end="\r")
+        print(f"{i}/{len(infos)}")
+        print(info)
         first_layer[str(info)] = "".join(list(get_best_guess([(word, info)], np.asarray(possible_answers))[0]))
         
                     
