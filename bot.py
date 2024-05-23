@@ -28,17 +28,21 @@ def gen_mask(guess, info, wl):
     mask = np.ones(wl.shape[0], dtype=bool)
     for i, (g, inf) in enumerate(zip(guess, info)):
         if inf == 1:
-            if np.count_nonzero(guess[info == 3] == g) >= 1 or np.count_nonzero(guess[info == 2] == g) >= 1:
+            if (
+                np.count_nonzero(guess[info == 3] == g) >= 1
+                or np.count_nonzero(guess[info == 2] == g) >= 1
+            ):
                 mask = np.logical_and(mask, wl[:, i] != g)
             else:
                 mask = np.logical_and(mask, np.all(wl != g, axis=1))
         elif inf == 2:
-            mask = np.logical_and(mask, np.logical_and(
-                np.any(wl == g, axis=1), wl[:, i] != g))
+            mask = np.logical_and(
+                mask, np.logical_and(np.any(wl == g, axis=1), wl[:, i] != g)
+            )
         elif inf == 3:
             mask = np.logical_and(mask, wl[:, i] == g)
         else:
-            raise Exception(f'Invalid information: {inf}')
+            raise Exception(f"Invalid information: {inf}")
     return mask
 
 
@@ -51,29 +55,37 @@ def get_remaining(guesses, wl):
 
 def frac_remaining(guess, info, wl):
     m = gen_mask(guess, info, wl)
-    return np.count_nonzero(m)/wl.shape[0]
+    return np.count_nonzero(m) / wl.shape[0]
 
 
 def avg_frac_remaining(guess, remaining_wl):
     all_info = it.product(*[[1, 2, 3] for _ in range(5)])
-    infos = [info for info in all_info if np.count_nonzero(gen_mask(guess, info, remaining_wl)) != 0]
+    infos = [
+        info
+        for info in all_info
+        if np.count_nonzero(gen_mask(guess, info, remaining_wl)) != 0
+    ]
     rem = [frac_remaining(guess, info, remaining_wl) for info in infos]
 
-    return np.sum(np.square(rem))/np.sum(rem)
+    return np.sum(np.square(rem)) / np.sum(rem)
 
 
 def score_word(guess, remaining_wl=wl):
-    return avg_frac_remaining(guess, remaining_wl) + (0.0001 if any(list(guess) == word for word in possible_answers) else 0)
+    bonus = (
+        -0.001
+        if any(list(guess) == list(word) for word in remaining_wl)
+        else 0
+    )
+    return avg_frac_remaining(guess, remaining_wl) + bonus
 
 
 def get_best_guess(guesses, wl):
     remaining_wl = get_remaining(guesses, wl)
     if len(remaining_wl) == 1:
         return remaining_wl[0], [remaining_wl[0]], True
-    with mp.Pool(mp.cpu_count()) as p:
+    with mp.Pool(mp.cpu_count()) as pool:
         func = ft.partial(score_word, remaining_wl=remaining_wl)
-        rem = p.map(func, wl)
-    # ties = rem == rem[np.argmin(rem)]
+        rem = pool.map(func, wl)
     return wl[np.argmin(rem)], remaining_wl, False
 
 
@@ -106,19 +118,23 @@ def prompt(prompt_text, output_conversion, output_criteria):
 
 # numbers 1, 2, 3 for gray, orange, green.
 
-nth = {
-    1: "first",
-    2: "second",
-    3: "third",
-    4: "fourth",
-    5: "fifth"
-}
+nth = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}
 
-if __name__ == '__main__':
-    obey = {'y': True, 'n': False}[prompt("Will you listen to the commands? (y/n) ",
-                                          lambda output: output.strip().lower(), [(lambda output: output == 'y' or output == 'n', "Input is not 'y' or 'n'.")])]
+if __name__ == "__main__":
+    obey = {"y": True, "n": False}[
+        prompt(
+            "Will you listen to the commands? (y/n) ",
+            lambda output: output.strip().lower(),
+            [
+                (
+                    lambda output: output == "y" or output == "n",
+                    "Input is not 'y' or 'n'.",
+                )
+            ],
+        )
+    ]
 
-    print("Use \"lares\" as your first word.")
+    print('Use "lares" as your first word.')
     best_guess = "lares"
     guesses = []
 
@@ -126,34 +142,53 @@ if __name__ == '__main__':
         guess_input_criteria = [
             (lambda word: len(word) == 5, "Input word is not 5 characters long."),
             (lambda word: word.isalpha(), "Input word is not all letters."),
-            (lambda word: any(word == "".join(list_word) for list_word in wl),
-             "Input word is not in the available guesses list.")
+            (
+                lambda word: any(word == "".join(list_word) for list_word in wl),
+                "Input word is not in the available guesses list.",
+            ),
         ]
         if not obey:
-            guess_letters = prompt(f"What was your {nth[i + 1]} guess? ", lambda output: output.strip(
-            ).lower(), guess_input_criteria)
+            guess_letters = prompt(
+                f"What was your {nth[i + 1]} guess? ",
+                lambda output: output.strip().lower(),
+                guess_input_criteria,
+            )
         info_input_criteria = [
             (lambda info: len(info) == 5, "Input info is not 5 characters long."),
-            (lambda info: all([char in ["1", "2", "3"] for char in info]),
-             "Input word has characters that are not in {1, 2, 3}."),
-            (lambda info: guess_valid(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
-             guesses, np.asarray(possible_answers)), "The input info does not leave any possible answers remaining.")
+            (
+                lambda info: all([char in ["1", "2", "3"] for char in info]),
+                "Input word has characters that are not in {1, 2, 3}.",
+            ),
+            (
+                lambda info: guess_valid(
+                    np.asarray(list(best_guess if obey else guess_letters)),
+                    tuple(map(int, info)),
+                    guesses,
+                    np.asarray(possible_answers),
+                ),
+                "The input info does not leave any possible answers remaining.",
+            ),
         ]
-        info = input("How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
-                    #lambda output: output.strip().lower(), info_input_criteria
-                    )
+        info = prompt(
+            "How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
+            lambda output: output.strip().lower(),
+            info_input_criteria,
+        )
 
         guesses.append(
-            (np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
+            (
+                np.asarray(list(best_guess if obey else guess_letters)),
+                tuple(map(int, info)),
+            )
+        )
         # use possible_answers if we know the answer list, otherwise use wl
-        guess, remaining, ended = get_best_guess(
-            guesses, np.asarray(possible_answers))
+        guess, remaining, ended = get_best_guess(guesses, np.asarray(possible_answers))
 
         best_guess = "".join(guess)
         if ended:
-            print(f"The answer is \"{best_guess}\".")
+            print(f'The answer is "{best_guess}".')
             break
         print("Remaining possible answers:")
         print(np.array(["".join(sub_array) for sub_array in remaining]))
-        print("The best guess right now is \"" + best_guess + "\".")
+        print('The best guess right now is "' + best_guess + '".')
     print("Thank you for using SuperGoodWordleBot™")
