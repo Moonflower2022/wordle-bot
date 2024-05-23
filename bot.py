@@ -20,7 +20,7 @@ possible_guesses = [list(word) for word in guesses_text.split("\n")]
 wl = np.asarray(possible_answers + possible_guesses)
 
 
-def gen_mask(guess, info, wl=wl):
+def gen_mask(guess, info, wl):
     info = np.asarray(info)
     mask = np.ones(wl.shape[0], dtype=bool)
     for i, (g, inf) in enumerate(zip(guess, info)):
@@ -39,57 +39,52 @@ def gen_mask(guess, info, wl=wl):
     return mask
 
 
-def get_remaining(guess, info, wl=wl):
-    return wl[gen_mask(guess, info, wl=wl)]
+def get_remaining(guess, info, wl):
+    return wl[gen_mask(guess, info, wl)]
 
 
-def frac_remaining(guess, info, wl=wl):
-    m = gen_mask(guess, info, wl=wl)
+def frac_remaining(guess, info, wl):
+    m = gen_mask(guess, info, wl)
     return np.count_nonzero(m)/wl.shape[0]
 
 
-def avg_frac_remaining(guess, wl=wl):
+def avg_frac_remaining(guess, remaining_wl):
     info = it.product(*[[1, 2, 3] for _ in range(5)])
     info = [x for x in info if np.count_nonzero(
-        gen_mask(guess, x, wl=wl)) != 0]
-    func = ft.partial(frac_remaining, guess, wl=wl)
-    rem = [func(i) for i in info]
+        gen_mask(guess, x, remaining_wl)) != 0]
+    rem = [frac_remaining(guess, i, remaining_wl) for i in info]
+    if np.sum(rem) == 0:
+        return 0
     return np.sum(np.square(rem))/np.sum(rem)
 
 
-nth = {
-    1: "first",
-    2: "second",
-    3: "third",
-    4: "fourth",
-    5: "fifth"
-}
+def score_word(guess, remaining_wl=wl):
+    return avg_frac_remaining(guess, remaining_wl) + (0.0001 if guess in possible_answers else 0)
 
 
 def get_best_guess(guesses, wl):
     remaining_wl = np.copy(wl)
-    for i in range(len(guesses)):
+    for guess, info in guesses:
         remaining_wl = get_remaining(
-            guesses[i][0], guesses[i][1], wl=remaining_wl)
+            guess, info, remaining_wl)
     if len(remaining_wl) == 1:
         return remaining_wl[0], [remaining_wl[0]], True
     with mp.Pool(mp.cpu_count()) as p:
-        func = ft.partial(avg_frac_remaining, wl=remaining_wl)
+        func = ft.partial(avg_frac_remaining, remaining_wl=remaining_wl)
         rem = p.map(func, wl)
     # ties = rem == rem[np.argmin(rem)]
-    # maybe write the thing where all guesses that are in the remaining answer list get a boost
     return wl[np.argmin(rem)], remaining_wl, False
 
 
-def word_exists(new_guess, new_info, guesses, wl):
+def guess_valid(new_guess, new_info, guesses, wl):
     new_guesses = guesses + [(new_guess, new_info)]
 
     remaining_wl = np.copy(wl)
-    for i in range(len(new_guesses)):
+    for guess, info in new_guesses:
         remaining_wl = get_remaining(
-            new_guesses[i][0], new_guesses[i][1], wl=remaining_wl)
+            guess, info, remaining_wl)
 
-    return np.count_nonzero(remaining_wl) != 0
+    return len(remaining_wl) != 0
 
 
 def prompt(prompt_text, output_conversion, output_criteria):
@@ -113,6 +108,13 @@ def prompt(prompt_text, output_conversion, output_criteria):
 
 # numbers 1, 2, 3 for gray, orange, green.
 
+nth = {
+    1: "first",
+    2: "second",
+    3: "third",
+    4: "fourth",
+    5: "fifth"
+}
 
 if __name__ == '__main__':
     obey = {'y': True, 'n': False}[prompt("Will you listen to the commands? (y/n) ",
@@ -136,10 +138,10 @@ if __name__ == '__main__':
             (lambda info: len(info) == 5, "Input info is not 5 characters long."),
             (lambda info: all([char in ["1", "2", "3"] for char in info]),
              "Input word has characters that are not in {1, 2, 3}."),
-            (lambda info: word_exists(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
-             guesses, wl), "The input info does not leave any words remaining.")
+            (lambda info: guess_valid(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
+             guesses, possible_answers), "The input info does not leave any possible answers remaining.")
         ]
-        info = prompt("How correct was it? (for each letter, type 1 for gray, 2 for yellow, and 3 for green) ",
+        info = prompt("How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
                       lambda output: output.strip().lower(), info_input_criteria)
 
         guesses.append(
