@@ -45,7 +45,7 @@ def gen_mask(guess, info, wl):
 def get_remaining(guesses, wl):
     remaining_wl = np.copy(wl)
     for guess, info in guesses:
-        remaining_wl = wl[gen_mask(guess, info, remaining_wl)]
+        remaining_wl = remaining_wl[gen_mask(guess, info, remaining_wl)]
     return remaining_wl
 
 
@@ -139,8 +139,9 @@ if __name__ == '__main__':
             (lambda info: guess_valid(np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info)),
              guesses, np.asarray(possible_answers)), "The input info does not leave any possible answers remaining.")
         ]
-        info = prompt("How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
-                    lambda output: output.strip().lower(), info_input_criteria)
+        info = input("How correct was it? (for each letter, gray: 1, yellow: 2, green: 3) ",
+                    #lambda output: output.strip().lower(), info_input_criteria
+                    )
 
         guesses.append(
             (np.asarray(list(best_guess if obey else guess_letters)), tuple(map(int, info))))
