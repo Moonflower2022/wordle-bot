@@ -71,11 +71,7 @@ def avg_frac_remaining(guess, remaining_wl):
 
 
 def score_word(guess, remaining_wl=wl):
-    bonus = (
-        -0.001
-        if any(list(guess) == list(word) for word in remaining_wl)
-        else 0
-    )
+    bonus = -0.001 if any(list(guess) == list(word) for word in remaining_wl) else 0
     return avg_frac_remaining(guess, remaining_wl) + bonus
 
 
@@ -134,8 +130,8 @@ if __name__ == "__main__":
         )
     ]
 
-    print('Use "lares" as your first word.')
-    best_guess = "lares"
+    print('Use "raise" as your first word.')
+    best_guess = "raise"
     guesses = []
 
     for i in range(5):
