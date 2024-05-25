@@ -81,7 +81,7 @@ if __name__ == "__main__":
             won = result_dict["won"]
         else:
             best, remaining_split, won = get_best_guess(guesses, np.asarray(possible_answers))
-            remaining = np.array(["".join(sub_array) for sub_array in remaining])
+            remaining = np.array(["".join(sub_array) for sub_array in remaining_split])
             best_guess = "".join(best)
 
         if won:
