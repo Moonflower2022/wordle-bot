@@ -11,9 +11,9 @@ A bot that plays wordle
 ## Usage
 
   1. download the code (if you are using git just do `git clone https://github.com/Moonflower2022/wordle-bot`)
-  2. cd to the directory  
+  2. cd to the directory (if you are using git, skip this step)
   3. download the requirements (`pip install -r requirements.txt`)  
-  4. run the file (ex: `python bot.py` or `python bot_cached.py`)  
+  4. run the file with `-h` (ex: `python bot.py -h` or `python bot_cached.py -h`)  
   5. follow the instructions  
 
 Feel free to send any unexpected bugs or comments to [dumbderivatives@gmail.com](mailto:dumbderivatives@gmail.com)
