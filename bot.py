@@ -3,6 +3,8 @@ import itertools as it
 import functools as ft
 import numpy as np
 import os
+import argparse
+import json
 
 dirname = os.path.dirname(__file__)
 answers_filename = os.path.join(dirname, "answers.txt")
@@ -17,80 +19,94 @@ guesses_text = guesess_file.read()
 possible_answers = [list(word) for word in answers_text.split("\n")]
 possible_guesses = [list(word) for word in guesses_text.split("\n")]
 
-wl = np.asarray(possible_answers + possible_guesses)
+words = np.asarray(possible_answers + possible_guesses)
 
 answers_file.close()
 guesess_file.close()
 
 
-def gen_mask(guess, info, wl):
+def gen_mask(guess, info, words):
     info = np.asarray(info)
-    mask = np.ones(wl.shape[0], dtype=bool)
+    mask = np.ones(words.shape[0], dtype=bool)
     for i, (g, inf) in enumerate(zip(guess, info)):
         if inf == 1:
             if (
                 np.count_nonzero(guess[info == 3] == g) >= 1
                 or np.count_nonzero(guess[info == 2] == g) >= 1
             ):
-                mask = np.logical_and(mask, wl[:, i] != g)
+                mask = np.logical_and(mask, words[:, i] != g)
             else:
-                mask = np.logical_and(mask, np.all(wl != g, axis=1))
+                mask = np.logical_and(mask, np.all(words != g, axis=1))
         elif inf == 2:
             mask = np.logical_and(
-                mask, np.logical_and(np.any(wl == g, axis=1), wl[:, i] != g)
+                mask, np.logical_and(np.any(words == g, axis=1), words[:, i] != g)
             )
         elif inf == 3:
-            mask = np.logical_and(mask, wl[:, i] == g)
+            mask = np.logical_and(mask, words[:, i] == g)
         else:
             raise Exception(f"Invalid information: {inf}")
     return mask
 
 
-def get_remaining(guesses, wl):
-    remaining_wl = np.copy(wl)
+def get_remaining(guesses, words):
+    remaining_words = np.copy(words)
     for guess, info in guesses:
-        remaining_wl = remaining_wl[gen_mask(guess, info, remaining_wl)]
-    return remaining_wl
+        remaining_words = remaining_words[gen_mask(guess, info, remaining_words)]
+    return remaining_words
 
 
-def frac_remaining(guess, info, wl):
-    m = gen_mask(guess, info, wl)
-    return np.count_nonzero(m) / wl.shape[0]
+def frac_remaining(guess, info, words):
+    m = gen_mask(guess, info, words)
+    return np.count_nonzero(m) / words.shape[0]
 
 
-def avg_frac_remaining(guess, remaining_wl):
+def avg_frac_remaining(guess, remaining_words):
     all_info = it.product(*[[1, 2, 3] for _ in range(5)])
     infos = [
         info
         for info in all_info
-        if np.count_nonzero(gen_mask(guess, info, remaining_wl)) != 0
+        if np.count_nonzero(gen_mask(guess, info, remaining_words)) != 0
     ]
-    rem = [frac_remaining(guess, info, remaining_wl) for info in infos]
+    rem = [frac_remaining(guess, info, remaining_words) for info in infos]
 
-    return np.sum(np.square(rem)) / np.sum(rem)
-
-
-def score_word(guess, remaining_wl=wl):
-    bonus = -0.001 if any(list(guess) == list(word) for word in remaining_wl) else 0
-    return avg_frac_remaining(guess, remaining_wl) + bonus
+    return np.mean(rem)  # np.sum(np.square(rem)) / np.sum(rem)
 
 
-def get_best_guess(guesses, wl):
-    remaining_wl = get_remaining(guesses, wl)
-    if len(remaining_wl) == 1:
-        return remaining_wl[0], [remaining_wl[0]], True
-    with mp.Pool(mp.cpu_count()) as pool:
-        func = ft.partial(score_word, remaining_wl=remaining_wl)
-        rem = pool.map(func, wl)
-    return wl[np.argmin(rem)], remaining_wl, False
+def score_word(guess, remaining_words=None):
+    bonus = -0.001 if any(list(guess) == list(word) for word in remaining_words) else 0
+    return avg_frac_remaining(guess, remaining_words) + bonus
 
 
-def guess_valid(new_guess, new_info, guesses, wl):
+def get_best_guess(guesses, words):
+    remaining_words = get_remaining(guesses, words)
+    if len(remaining_words) == 1:
+        best_guess = remaining_words[0]
+        won = True
+    else:
+        with mp.Pool(mp.cpu_count()) as pool:
+            func = ft.partial(score_word, remaining_words=remaining_words)
+            rem = pool.map(func, words)
+        best_guess = words[np.argmin(rem)]
+        won = False
+    return "".join(list(best_guess)), remaining_words, won
+
+
+def get_guess_from_tree(guesses, guess_tree):
+    branch = guess_tree
+    for i, (_, info) in enumerate(guesses):
+        if i > 0:
+            branch = branch["next"]
+        branch = branch[str(info)]
+
+    return branch["best"], branch["remaining"], branch["won"]
+
+
+def guess_valid(new_guess, new_info, guesses, words):
     new_guesses = guesses + [(new_guess, new_info)]
 
-    remaining_wl = get_remaining(new_guesses, wl)
+    remaining_words = get_remaining(new_guesses, words)
 
-    return len(remaining_wl) != 0
+    return len(remaining_words) != 0
 
 
 def prompt(prompt_text, output_conversion, output_criteria):
@@ -117,21 +133,28 @@ def prompt(prompt_text, output_conversion, output_criteria):
 nth = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}
 
 if __name__ == "__main__":
-    obey = {"y": True, "n": False}[
-        prompt(
-            "Will you listen to the commands? (y/n) ",
-            lambda output: output.strip().lower(),
-            [
-                (
-                    lambda output: output == "y" or output == "n",
-                    "Input is not 'y' or 'n'.",
-                )
-            ],
-        )
-    ]
+    parser = argparse.ArgumentParser(description="wordle-bot")
+    parser.add_argument(
+        "-c",
+        "--cached",
+        action="store_true",
+        help="use cached results stored in guess_tree.json",
+    )
+    parser.add_argument(
+        "-o",
+        "--obey",
+        action="store_true",
+        help="assume that user is following suggested guesses",
+    )
 
-    print('Use "raise" as your first word.')
-    best_guess = "raise"
+    args = parser.parse_args()
+
+    if args.cached:
+        with open("guess_tree.json") as file:
+            guess_tree = json.load(file)
+
+    print('Use "trace" as your first word.')
+    best_guess = "trace"
     guesses = []
 
     for i in range(5):
@@ -139,16 +162,17 @@ if __name__ == "__main__":
             (lambda word: len(word) == 5, "Input word is not 5 characters long."),
             (lambda word: word.isalpha(), "Input word is not all letters."),
             (
-                lambda word: any(word == "".join(list_word) for list_word in wl),
+                lambda word: any(word == "".join(list_word) for list_word in words),
                 "Input word is not in the available guesses list.",
             ),
         ]
-        if not obey:
+        if not args.obey:
             guess_letters = prompt(
                 f"What was your {nth[i + 1]} guess? ",
                 lambda output: output.strip().lower(),
                 guess_input_criteria,
             )
+        guess = best_guess if args.obey else guess_letters
         info_input_criteria = [
             (lambda info: len(info) == 5, "Input info is not 5 characters long."),
             (
@@ -157,7 +181,7 @@ if __name__ == "__main__":
             ),
             (
                 lambda info: guess_valid(
-                    np.asarray(list(best_guess if obey else guess_letters)),
+                    np.asarray(list(guess)),
                     tuple(map(int, info)),
                     guesses,
                     np.asarray(possible_answers),
@@ -173,14 +197,18 @@ if __name__ == "__main__":
 
         guesses.append(
             (
-                np.asarray(list(best_guess if obey else guess_letters)),
+                np.asarray(list(guess)),
                 tuple(map(int, info)),
             )
         )
-        # use possible_answers if we know the answer list, otherwise use wl
-        guess, remaining, ended = get_best_guess(guesses, np.asarray(possible_answers))
 
-        best_guess = "".join(guess)
+        if args.cached:
+            best_guess, remaining, ended = get_guess_from_tree(guesses, guess_tree)
+        else:
+            best_guess, remaining, ended = get_best_guess(
+                guesses, np.asarray(possible_answers)
+            )
+
         if ended:
             print(f'The answer is "{best_guess}".')
             break

@@ -4,7 +4,7 @@ import numpy as np
 from get_info import get_info
 
 def num_guesses(answer, second_guesses, third_guesses):
-    best_guess = "raise"
+    best_guess = "trace"
     guesses = []
 
     for i in range(10):
