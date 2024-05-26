@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 
 def get_info(guess, answer):
     info = [0, 0, 0, 0, 0]
@@ -25,5 +26,14 @@ def get_info(guess, answer):
 
     return tuple(info)
 
+def test():
+    assert get_info("raise", np.asarray(list("lares"))) == (2, 3, 1, 2, 2)
+    assert get_info("sands", np.asarray(list("brass"))) == (2, 2, 1, 1, 3)
+    assert get_info("turns", np.asarray(list("brass"))) == (1, 1, 2, 1, 3)
+    assert get_info("super", np.asarray(list("brass"))) == (2, 1, 1, 1, 2)
+    assert get_info("carbs", np.asarray(list("brass"))) == (1, 2, 2, 2, 3)
+    assert get_info("barbs", np.asarray(list("brass"))) == (3, 2, 2, 1, 3)
+
 if __name__ == '__main__':
+    test()
     print(get_info(sys.argv[1], sys.argv[2]))
