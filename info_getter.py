@@ -1,4 +1,4 @@
-import sys
+import argparse
 import numpy as np
 
 
@@ -51,6 +51,17 @@ def test():
     assert get_info("speed", np.asarray(list("crepe"))) == (1, 2, 3, 2, 1)
 
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="a utility to find the wordle info that a guess would get from an ansewer"
+    )
+    parser.add_argument("guess", type=str, help="the guess")
+    parser.add_argument("answer", type=str, help="the word")
+
+    args = parser.parse_args()
+    print(get_info(args.guess, args.answer))
+
+
 if __name__ == "__main__":
     test()
-    print(get_info(sys.argv[1], sys.argv[2]))
+    main()

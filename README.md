@@ -1,19 +1,25 @@
 # wordle-bot
 
-A bot that plays wordle
+A bot that finds the best wordle guess(es).
 
-`available_remaining.py` is a version that just tells you all of the remaining words that are possible.  
+## files
 
-`bot.py` is a the optimized version that tells you the best word to guess in terms of expected remaining number of guesses. Inspired by [this article](https://ben.land/post/2022/02/11/optimal-wordle-solution/).
+`bot.py` is the bot that tells you the best word to guess in terms of expected information elimnation.  
 
-`bot_cached.py` is the same thing as `bot.py` but it uses cached information written by `second_guesses_cacher.py` and `third_guesses_cacher.py` for speed.  
+`first_word.py` tells you the best first word to guess.  
+
+`cacher.py` caches results for the `-c` flag on `bot.py` (it takes really long).
+
+`evaluator.py` evaluates the bot in terms of average number of guesses to win a game using cached results.
+
+`info_getter.py` tells you the information that you would get given a guess and an answer.  
 
 ## Usage
 
   1. download the code (if you are using git just do `git clone https://github.com/Moonflower2022/wordle-bot`)
   2. cd to the directory (if you are using git, skip this step)
   3. download the requirements (`pip install -r requirements.txt`)  
-  4. run the file with `-h` (ex: `python bot.py -h` or `python bot_cached.py -h`)  
-  5. follow the instructions  
+  4. run the file (ex: `python bot.py` or `python bot_cached.py`)
+  5. follow the instructions, for most scripts adding `-h` to the end of the python command gives you instructions on command line flags.
 
 Feel free to send any unexpected bugs or comments to [dumbderivatives@gmail.com](mailto:dumbderivatives@gmail.com)
