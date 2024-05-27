@@ -326,8 +326,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(args.cached, args.obey, args.remaining, args.top)
-
     guess_input_criteria = [
         (lambda word: len(word) == 5, "Input word is not 5 characters long."),
         (lambda word: word.isalpha(), "Input word is not all letters."),
