@@ -157,11 +157,15 @@ def prompt(prompt_text, output_conversion, output_criteria):
 
 def main():
     if args.cached:
-        with open("guess_tree.json") as file:
+        with open(f"guess_trees/{args.cached}.json") as file:
             guess_tree = json.load(file)
 
-    print('Use "trace" as your first word.')
-    best_guess = "trace"
+    if args.cached:
+        args.obey = True
+
+    best_guess = args.cached if args.cached else "trace"
+    print(f'Use "{best_guess}" as your first word.')
+
     guess_history = []
 
     for i in range(5):
@@ -223,16 +227,15 @@ def main():
             break
         print("Remaining possible answers:")
         print(np.array(["".join(sub_array) for sub_array in remaining]))
-        if not args.cached:
-            if args.top:
-                print(f"The top {args.top} guesses right now:")
-                print("Guess\tExpected Info")
-                for i in range(args.top):
-                    print(f"{best_guess[i]}\t{score[i]}")
-            else:
-                print(
-                    f"The best guess right now is \"{best_guess}\" with an expected information of {score}."
-                )
+        if not args.cached and args.top:
+            print(f"The top {args.top} guesses right now:")
+            print("Guess\tExpected Info")
+            for i in range(args.top):
+                print(f"{best_guess[i]}\t{score[i]}")
+        else:
+            print(
+                f'The best guess right now is "{best_guess}" with an expected information of {score}.'
+            )
 
     print("Thank you for using SuperGoodWordleBot™")
 
@@ -296,7 +299,8 @@ if __name__ == "__main__":
     group.add_argument(
         "-c",
         "--cached",
-        action="store_true",
+        type=str,
+        dest="cached",
         help="use cached results stored in guess_trees",
     )
     group.add_argument(
@@ -321,6 +325,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    print(args.cached, args.obey, args.remaining, args.top)
 
     guess_input_criteria = [
         (lambda word: len(word) == 5, "Input word is not 5 characters long."),
