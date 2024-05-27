@@ -229,12 +229,12 @@ def main():
         print(np.array(["".join(sub_array) for sub_array in remaining]))
         if not args.cached and args.top:
             print(f"The top {args.top} guesses right now:")
-            print("Guess\tExpected Remaining Info")
+            print("Guess\tExpected Remaining Info (with bonus of -0.001 if guess could be the answer)")
             for i in range(args.top):
                 print(f"{best_guess[i]}\t{score[i]}")
         else:
             print(
-                f'The best guess right now is "{best_guess}" with an expected remaining information of {score}.'
+                f'The best guess right now is "{best_guess}" with an expected remaining information of {score} (with bonus of -0.001 if guess could be the answer).'
             )
 
     print("Thank you for using SuperGoodWordleBot™")
