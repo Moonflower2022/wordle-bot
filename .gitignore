@@ -2,3 +2,5 @@ second_guesses.json
 third_guesses.json
 
 /__pycache__/
+
+.DS_Store
