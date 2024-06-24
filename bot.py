@@ -20,7 +20,7 @@ guess_history_text = guesess_file.read()
 possible_answers = [list(word) for word in answers_text.split("\n")]
 possible_guess_history = [list(word) for word in guess_history_text.split("\n")]
 
-words = np.asarray(possible_answers + possible_guess_history)
+all_words = possible_answers + possible_guess_history
 
 answers_file.close()
 guesess_file.close()
@@ -83,27 +83,29 @@ def weighted_entropy(guess, remaining_words):
     return np.dot(entropies, probabilities)
 
 
-def score_word(guess, remaining_words=None):
-    score = weighted_entropy(guess, remaining_words)
-    bonus = -0.001 if any(list(guess) == list(word) for word in remaining_words) else 0
+def score_word(guess, remaining_answers=None):
+    score = weighted_entropy(guess, remaining_answers)
+    bonus = (
+        -0.001 if any(list(guess) == list(word) for word in remaining_answers) else 0
+    )
     return score + bonus
 
 
-def get_best_guess(guess_history, words, top=None):
-    remaining_words = get_remaining(guess_history, words)
-    if len(remaining_words) == 1:
-        return "".join(remaining_words[0]), 0, [], True
+def get_best_guess(guess_history, possible_answers, all_words, top=None):
+    remaining_answers = get_remaining(guess_history, possible_answers)
+    if len(remaining_answers) == 1:
+        return "".join(remaining_answers[0]), 0, [], True
     else:
         with mp.Pool(mp.cpu_count()) as pool:
-            scorer = ft.partial(score_word, remaining_words=remaining_words)
-            scores = np.asarray(pool.map(scorer, words))
+            scorer = ft.partial(score_word, remaining_answers=remaining_answers)
+            scores = np.asarray(pool.map(scorer, all_words))
         if top:
             sorted_indicies = np.argsort(scores)
             bottom_sorted_indicies = sorted_indicies[:top]
-            best_guess_history = words[bottom_sorted_indicies]
+            best_guess_history = all_words[bottom_sorted_indicies]
             best_scores = scores[bottom_sorted_indicies]
         else:
-            best_guess = words[np.argmin(scores)]
+            best_guess = all_words[np.argmin(scores)]
             best_score = np.min(scores)
         won = False
     return (
@@ -113,7 +115,7 @@ def get_best_guess(guess_history, words, top=None):
             else "".join(list(best_guess))
         ),
         best_scores if top else best_score,
-        remaining_words,
+        remaining_answers,
         won,
     )
 
@@ -155,6 +157,17 @@ def prompt(prompt_text, output_conversion, output_criteria):
             return output
 
 
+guess_input_criteria = [
+    (lambda word: len(word) == 5, "Input word is not 5 characters long."),
+    (lambda word: word.isalpha(), "Input word is not all letters."),
+    (
+        lambda word: any(word == "".join(list_word) for list_word in all_words),
+        "Input word is not in the available guesses list.",
+    ),
+]
+
+nth = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}
+
 def main():
     if args.cached:
         with open(f"guess_trees/{args.cached}.json") as file:
@@ -169,14 +182,6 @@ def main():
     guess_history = []
 
     for i in range(5):
-        guess_input_criteria = [
-            (lambda word: len(word) == 5, "Input word is not 5 characters long."),
-            (lambda word: word.isalpha(), "Input word is not all letters."),
-            (
-                lambda word: any(word == "".join(list_word) for list_word in words),
-                "Input word is not in the available guesses list.",
-            ),
-        ]
         if not args.obey:
             user_guess = prompt(
                 f"What was your {nth[i + 1]} guess? ",
@@ -219,7 +224,10 @@ def main():
             )
         else:
             best_guess, score, remaining, ended = get_best_guess(
-                guess_history, np.asarray(possible_answers), top=args.top
+                guess_history,
+                np.asarray(possible_answers),
+                np.asarray(all_words),
+                top=args.top,
             )
 
         if ended:
@@ -229,7 +237,9 @@ def main():
         print(np.array(["".join(sub_array) for sub_array in remaining]))
         if not args.cached and args.top:
             print(f"The top {args.top} guesses right now:")
-            print("Guess\tExpected Remaining Info (with bonus of -0.001 if guess could be the answer)")
+            print(
+                "Guess\tExpected Remaining Info (with bonus of -0.001 if guess could be the answer)"
+            )
             for i in range(args.top):
                 print(f"{best_guess[i]}\t{score[i]}")
         else:
@@ -290,7 +300,6 @@ def main_remaining():
 
 
 if __name__ == "__main__":
-    nth = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}
 
     parser = argparse.ArgumentParser(description="wordle-bot")
 
@@ -325,15 +334,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    guess_input_criteria = [
-        (lambda word: len(word) == 5, "Input word is not 5 characters long."),
-        (lambda word: word.isalpha(), "Input word is not all letters."),
-        (
-            lambda word: any(word == "".join(list_word) for list_word in words),
-            "Input word is not in the available guesses list.",
-        ),
-    ]
 
     if args.remaining:
         main_remaining()

@@ -1,4 +1,4 @@
-from bot import get_best_guess, gen_mask, get_remaining, possible_answers
+from bot import get_best_guess, gen_mask, get_remaining, all_words, possible_answers
 import itertools as it
 import numpy as np
 import json
@@ -19,7 +19,7 @@ def save_json(filename, data):
 
 
 def recursive_fill(guess_history, remaining_answers):
-    best_guess, score, remaining, won = get_best_guess(guess_history, remaining_answers)
+    best_guess, score, remaining, won = get_best_guess(guess_history, remaining_answers, np.asarray(all_words))
     result = {
         "best": best_guess,
         "score": score,
